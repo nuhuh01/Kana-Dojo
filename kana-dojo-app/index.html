@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Kana Dojo — 仮名道場</title>
+<meta name="theme-color" content="#151726">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --ink:#1b1c2b;
+    --paper:#f4efe4;
+    --paper-dim:#e8e1d2;
+    --indigo:#2c3564;
+    --indigo-deep:#151726;
+    --seal:#b13b3b;
+    --seal-dim:#8f2f2f;
+    --gold:#c19a4b;
+    --line: rgba(27,28,43,0.14);
+    --ok:#3f7d5c;
+    --bad:#b13b3b;
+    --font-display: "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP","Hiragino Sans", serif;
+    --font-body: "Hiragino Sans","Yu Gothic","Noto Sans JP",-apple-system,Roboto,sans-serif;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 8%, rgba(193,154,75,0.10), transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(177,59,59,0.08), transparent 40%),
+      var(--indigo-deep);
+    font-family: var(--font-body);
+    color: var(--paper);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: 18px 14px 40px;
+  }
+  .app{
+    width:100%;
+    max-width:460px;
+  }
+
+  /* Header */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 6px 4px 18px;
+    border-bottom: 1px solid rgba(244,239,228,0.15);
+    margin-bottom: 18px;
+  }
+  .brand{
+    display:flex; align-items:baseline; gap:10px;
+  }
+  .brand .kanji{
+    font-family: var(--font-display);
+    font-weight:800;
+    font-size: 26px;
+    letter-spacing: 0.08em;
+    color: var(--paper);
+  }
+  .brand .sub{
+    font-size:11px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color: var(--gold);
+    opacity:0.9;
+  }
+  .seal-badge{
+    width:36px;height:36px;border-radius:6px;
+    background: var(--seal);
+    display:flex;align-items:center;justify-content:center;
+    font-family: var(--font-display);
+    font-weight:800; font-size:16px; color:#f4efe4;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    transform: rotate(-3deg);
+    flex-shrink:0;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex; gap:8px; margin-bottom:16px;
+  }
+  .tab{
+    flex:1;
+    text-align:center;
+    padding:10px 6px;
+    border-radius:10px;
+    background: rgba(244,239,228,0.06);
+    border:1px solid rgba(244,239,228,0.14);
+    color: rgba(244,239,228,0.75);
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    transition: all 0.15s ease;
+    user-select:none;
+  }
+  .tab.active{
+    background: var(--gold);
+    color: var(--indigo-deep);
+    border-color: var(--gold);
+  }
+
+  /* Panels */
+  .panel{ display:none; }
+  .panel.active{ display:block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .card{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(27,28,43,0.035) 28px);
+    pointer-events:none;
+  }
+
+  /* Stats row */
+  .stats{
+    display:flex; justify-content:space-between;
+    font-size:12px; color: rgba(244,239,228,0.65);
+    margin: 0 4px 10px;
+    letter-spacing:0.03em;
+  }
+  .stats b{ color: var(--gold); font-weight:800; }
+
+  /* Prompt char */
+  .prompt-wrap{
+    text-align:center;
+    padding: 6px 0 18px;
+    position:relative; z-index:1;
+  }
+  .prompt-char{
+    font-family: var(--font-display);
+    font-size: 108px;
+    font-weight: 700;
+    line-height:1;
+    color: var(--ink);
+  }
+  .prompt-meta{
+    margin-top:6px;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color: rgba(27,28,43,0.45);
+  }
+
+  /* Type mode input */
+  .answer-row{
+    display:flex; gap:10px; position:relative; z-index:1;
+  }
+  input#romajiInput{
+    flex:1;
+    font-size:20px;
+    padding:14px 16px;
+    border-radius:10px;
+    border:2px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-weight:700;
+    outline:none;
+  }
+  input#romajiInput:focus{ border-color: var(--indigo); }
+  input#romajiInput.correct{ border-color: var(--ok); background:#eef7f1; }
+  input#romajiInput.wrong{ border-color: var(--bad); background:#fbecec; }
+
+  .btn{
+    border:none; border-radius:10px;
+    padding: 12px 18px;
+    font-family: var(--font-body);
+    font-weight:800;
+    font-size:14px;
+    cursor:pointer;
+    letter-spacing:0.02em;
+    transition: transform 0.08s ease, filter 0.15s ease;
+  }
+  .btn:active{ transform: scale(0.96); }
+  .btn-seal{ background: var(--seal); color:#fff; }
+  .btn-seal:hover{ filter:brightness(1.08); }
+  .btn-ghost{
+    background: transparent; color: var(--ink);
+    border: 1.5px solid var(--line);
+  }
+  .btn-indigo{ background: var(--indigo); color: var(--paper); }
+  .btn-gold{ background: var(--gold); color: var(--indigo-deep); }
+
+  .feedback{
+    min-height:20px;
+    margin-top:10px;
+    font-size:13px;
+    font-weight:700;
+    text-align:center;
+    position:relative; z-index:1;
+  }
+  .feedback.ok{ color: var(--ok); }
+  .feedback.bad{ color: var(--bad); }
+
+  /* Draw mode */
+  .canvas-wrap{
+    position:relative;
+    width:260px; height:260px;
+    margin: 0 auto 14px;
+    border-radius:12px;
+    border: 2px solid var(--ink);
+    background:
+      linear-gradient(var(--line) 1px, transparent 1px) 0 0/100% 50%,
+      linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0/50% 100%,
+      #fffdf7;
+    overflow:hidden;
+  }
+  canvas#drawCanvas{
+    position:absolute; inset:0;
+    touch-action:none;
+    width:100%; height:100%;
+  }
+  canvas#overlayCanvas{
+    position:absolute; inset:0;
+    pointer-events:none;
+    opacity:0;
+    transition: opacity 0.2s ease;
+  }
+  canvas#overlayCanvas.show{ opacity:0.28; }
+
+  .draw-controls{
+    display:flex; gap:8px; flex-wrap:wrap;
+    justify-content:center;
+    position:relative; z-index:1;
+    margin-bottom: 8px;
+  }
+  .draw-controls .btn{ flex:1; min-width: 84px; font-size:12.5px; padding:11px 8px; }
+
+  .score-pill{
+    text-align:center;
+    font-size:13px;
+    font-weight:800;
+    color: rgba(27,28,43,0.55);
+    margin-top: 8px;
+    position:relative; z-index:1;
+  }
+  .score-pill.ok{ color: var(--ok); }
+  .score-pill.bad{ color: var(--bad); }
+
+  /* Settings */
+  .settings-card{
+    background: var(--paper); color: var(--ink);
+    border-radius:16px; padding: 18px;
+    margin-top: 16px;
+  }
+  .settings-title{
+    font-family: var(--font-display);
+    font-weight:800; font-size:16px;
+    margin-bottom:10px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .settings-title .dot{ width:6px;height:6px;border-radius:50%; background:var(--seal); }
+  .set-group{ margin-bottom:14px; }
+  .set-group-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.12em;
+    color: rgba(27,28,43,0.5); margin-bottom:8px; font-weight:700;
+  }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:7px; }
+  .chip{
+    padding: 7px 12px;
+    border-radius:999px;
+    border:1.5px solid var(--line);
+    font-size:12.5px;
+    font-weight:700;
+    cursor:pointer;
+    user-select:none;
+    color: rgba(27,28,43,0.55);
+    background: rgba(27,28,43,0.02);
+  }
+  .chip.on{
+    background: var(--indigo); color: var(--paper); border-color: var(--indigo);
+  }
+
+  .mode-sub{
+    display:flex; gap:8px; margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .mode-sub .chip{ flex:1; text-align:center; min-width:88px; }
+
+  .speak-btn{
+    width:44px; height:44px;
+    border-radius:50%;
+    border:1.5px solid var(--line);
+    background:#fff;
+    color: var(--ink);
+    font-size:18px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .speak-btn:active{ transform: scale(0.92); }
+  .speak-btn.playing{ background: var(--gold); border-color: var(--gold); }
+  .prompt-flex{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+  }
+
+  .mic-btn{
+    width:96px; height:96px;
+    border-radius:50%;
+    border:none;
+    background: var(--indigo);
+    color: var(--paper);
+    font-size:34px;
+    display:flex; align-items:center; justify-content:center;
+    margin: 6px auto 14px;
+    cursor:pointer;
+    box-shadow: 0 6px 18px rgba(44,53,100,0.35);
+    transition: transform 0.12s ease, background 0.2s ease, box-shadow 0.2s ease;
+    position:relative; z-index:1;
+  }
+  .mic-btn:active{ transform: scale(0.94); }
+  .mic-btn.listening{
+    background: var(--seal);
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%{ box-shadow: 0 0 0 0 rgba(177,59,59,0.45); }
+    70%{ box-shadow: 0 0 0 16px rgba(177,59,59,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(177,59,59,0); }
+  }
+  .mic-hint{
+    text-align:center; font-size:12px; color: rgba(27,28,43,0.5);
+    margin-bottom:10px; position:relative; z-index:1;
+  }
+  .transcript-box{
+    text-align:center;
+    min-height:22px;
+    font-size:14px;
+    font-weight:700;
+    color: var(--ink);
+    margin-bottom: 6px;
+    position:relative; z-index:1;
+  }
+  .unsupported-note{
+    background: rgba(177,59,59,0.08);
+    border:1px solid rgba(177,59,59,0.25);
+    color: var(--seal-dim);
+    font-size:12.5px;
+    padding:12px 14px;
+    border-radius:10px;
+    margin-bottom:14px;
+    line-height:1.5;
+  }
+
+  /* Progress bar */
+  .progress-wrap{
+    margin-bottom:10px;
+  }
+  .progress-labels{
+    display:flex; justify-content:space-between;
+    font-size:11px; color: rgba(244,239,228,0.55);
+    margin-bottom:5px; letter-spacing:0.03em;
+  }
+  .progress-labels b{ color: var(--gold); font-weight:800; }
+  .progress-track{
+    height:7px; border-radius:999px;
+    background: rgba(244,239,228,0.12);
+    overflow:hidden;
+    display:flex;
+  }
+  .progress-seg{ height:100%; }
+  .progress-seg.mastered{ background: var(--ok); }
+  .progress-seg.due{ background: var(--seal); }
+  .progress-seg.learning{ background: var(--gold); }
+
+  /* Grading buttons (Anki-style: Again / Hard / Good / Easy) */
+  .grade-row{
+    display:none;
+    gap:7px;
+    margin-top:12px;
+    position:relative; z-index:1;
+  }
+  .grade-row.show{ display:flex; }
+  .grade-btn{
+    flex:1;
+    border:none; border-radius:10px;
+    padding: 12px 4px 10px;
+    font-family: var(--font-body);
+    font-weight:800; font-size:12px;
+    cursor:pointer;
+    color:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    transition: transform 0.08s ease;
+  }
+  .grade-btn:active{ transform: scale(0.95); }
+  .grade-btn .interval{ font-size:9.5px; font-weight:600; opacity:0.85; }
+  .grade-again{ background:#8f2f2f; }
+  .grade-hard{ background:#a3712f; }
+  .grade-good{ background:#3f7d5c; }
+  .grade-easy{ background:#2c3564; }
+
+  .all-caught-up{
+    text-align:center;
+    padding: 30px 10px;
+    position:relative; z-index:1;
+  }
+  .all-caught-up .big{ font-size:40px; margin-bottom:8px; }
+  .all-caught-up .msg{ font-size:14px; font-weight:700; color: var(--ink); margin-bottom:4px; }
+  .all-caught-up .sub{ font-size:12px; color: rgba(27,28,43,0.5); margin-bottom:14px; }
+    text-align:center;
+    font-size:11px;
+    color: rgba(244,239,228,0.35);
+    margin-top: 22px;
+    letter-spacing:0.05em;
+  }
+
+  @media (max-width:360px){
+    .prompt-char{ font-size:88px; }
+    .canvas-wrap{ width:220px; height:220px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <div class="kanji">仮名道場</div>
+      <div class="sub">Kana Dojo</div>
+    </div>
+    <div class="seal-badge">道</div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="type">Type</div>
+    <div class="tab" data-tab="draw">Draw</div>
+    <div class="tab" data-tab="speak">Speak</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
+
+  <!-- TYPE MODE -->
+  <div class="panel active" id="panel-type">
+    <div class="progress-wrap">
+      <div class="progress-labels"><span>Progress</span><b id="typeProgressLabel">0/0 mastered</b></div>
+      <div class="progress-track"><div class="progress-seg mastered" id="typeProgMastered"></div><div class="progress-seg due" id="typeProgDue"></div><div class="progress-seg learning" id="typeProgLearning"></div></div>
+    </div>
+    <div class="stats">
+      <span>Score <b id="typeScore">0/0</b></span>
+      <span>Streak <b id="typeStreak">0</b></span>
+    </div>
+    <div class="card">
+      <div id="typeQuizBody">
+        <div class="prompt-wrap">
+          <div class="prompt-flex">
+            <div class="prompt-char" id="typeChar">あ</div>
+            <button class="speak-btn" id="typeSpeak" title="Hear it">🔊</button>
+          </div>
+          <div class="prompt-meta" id="typeSetLabel">hiragana</div>
+        </div>
+        <div class="answer-row">
+          <input id="romajiInput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type…">
+          <button class="btn btn-seal" id="typeSubmit">Check</button>
+        </div>
+        <div class="feedback" id="typeFeedback"></div>
+        <div class="grade-row" id="typeGradeRow">
+          <button class="grade-btn grade-again" data-grade="again">Again<span class="interval" id="typeIvAgain"></span></button>
+          <button class="grade-btn grade-hard" data-grade="hard">Hard<span class="interval" id="typeIvHard"></span></button>
+          <button class="grade-btn grade-good" data-grade="good">Good<span class="interval" id="typeIvGood"></span></button>
+          <button class="grade-btn grade-easy" data-grade="easy">Easy<span class="interval" id="typeIvEasy"></span></button>
+        </div>
+      </div>
+      <div class="all-caught-up" id="typeCaughtUp" style="display:none;">
+        <div class="big">✅</div>
+        <div class="msg">All caught up</div>
+        <div class="sub" id="typeCaughtUpSub">Next character unlocks soon</div>
+        <button class="btn btn-ghost" id="typeStudyAnyway">Study ahead anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRAW MODE -->
+  <div class="panel" id="panel-draw">
+    <div class="progress-wrap">
+      <div class="progress-labels"><span>Progress</span><b id="drawProgressLabel">0/0 mastered</b></div>
+      <div class="progress-track"><div class="progress-seg mastered" id="drawProgMastered"></div><div class="progress-seg due" id="drawProgDue"></div><div class="progress-seg learning" id="drawProgLearning"></div></div>
+    </div>
+    <div class="stats">
+      <span>Score <b id="drawScore">0/0</b></span>
+      <span>Streak <b id="drawStreak">0</b></span>
+    </div>
+    <div class="card">
+      <div id="drawQuizBody">
+        <div class="prompt-wrap" style="padding-bottom:10px;">
+          <div class="prompt-meta" id="drawSetLabel">draw this character</div>
+          <div class="prompt-flex">
+            <div class="prompt-char" id="drawChar" style="font-size:44px; margin-top:2px;">か</div>
+            <button class="speak-btn" id="drawSpeak" title="Hear it">🔊</button>
+          </div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="overlayCanvas" width="520" height="520"></canvas>
+          <canvas id="drawCanvas" width="520" height="520"></canvas>
+        </div>
+        <div class="draw-controls">
+          <button class="btn btn-ghost" id="clearBtn">Clear</button>
+          <button class="btn btn-gold" id="revealBtn">Show Stroke</button>
+          <button class="btn btn-indigo" id="checkBtn">Check Drawing</button>
+        </div>
+        <div class="draw-controls">
+          <button class="btn btn-ghost" id="nextBtn" style="flex:1 1 100%;">Skip, no grade →</button>
+        </div>
+        <div class="score-pill" id="drawResult"></div>
+        <div class="grade-row" id="drawGradeRow">
+          <button class="grade-btn grade-again" data-grade="again">Again<span class="interval" id="drawIvAgain"></span></button>
+          <button class="grade-btn grade-hard" data-grade="hard">Hard<span class="interval" id="drawIvHard"></span></button>
+          <button class="grade-btn grade-good" data-grade="good">Good<span class="interval" id="drawIvGood"></span></button>
+          <button class="grade-btn grade-easy" data-grade="easy">Easy<span class="interval" id="drawIvEasy"></span></button>
+        </div>
+      </div>
+      <div class="all-caught-up" id="drawCaughtUp" style="display:none;">
+        <div class="big">✅</div>
+        <div class="msg">All caught up</div>
+        <div class="sub" id="drawCaughtUpSub">Next character unlocks soon</div>
+        <button class="btn btn-ghost" id="drawStudyAnyway">Study ahead anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPEAK MODE -->
+  <div class="panel" id="panel-speak">
+    <div class="progress-wrap">
+      <div class="progress-labels"><span>Progress</span><b id="speakProgressLabel">0/0 mastered</b></div>
+      <div class="progress-track"><div class="progress-seg mastered" id="speakProgMastered"></div><div class="progress-seg due" id="speakProgDue"></div><div class="progress-seg learning" id="speakProgLearning"></div></div>
+    </div>
+    <div class="stats">
+      <span>Score <b id="speakScore">0/0</b></span>
+      <span>Streak <b id="speakStreak">0</b></span>
+    </div>
+    <div class="card">
+      <div id="speakUnsupported" class="unsupported-note" style="display:none;">
+        Your browser doesn't support speech recognition, so pronunciation checking can't run here. Try Chrome on Android — you can still use 🔊 to hear the correct sound.
+      </div>
+      <div id="speakQuizBody">
+        <div class="prompt-wrap" style="padding-bottom:10px;">
+          <div class="prompt-flex">
+            <div class="prompt-char" id="speakChar" style="font-size:80px;">あ</div>
+            <button class="speak-btn" id="speakHear" title="Hear it">🔊</button>
+          </div>
+          <div class="prompt-meta" id="speakSetLabel">hiragana</div>
+        </div>
+        <button class="mic-btn" id="micBtn">🎙️</button>
+        <div class="mic-hint" id="micHint">Tap the mic, then say it out loud</div>
+        <div class="transcript-box" id="transcriptBox"></div>
+        <div class="score-pill" id="speakResult"></div>
+        <div class="draw-controls">
+          <button class="btn btn-ghost" id="speakNextBtn" style="flex:1 1 100%;">Skip, no grade →</button>
+        </div>
+        <div class="grade-row" id="speakGradeRow">
+          <button class="grade-btn grade-again" data-grade="again">Again<span class="interval" id="speakIvAgain"></span></button>
+          <button class="grade-btn grade-hard" data-grade="hard">Hard<span class="interval" id="speakIvHard"></span></button>
+          <button class="grade-btn grade-good" data-grade="good">Good<span class="interval" id="speakIvGood"></span></button>
+          <button class="grade-btn grade-easy" data-grade="easy">Easy<span class="interval" id="speakIvEasy"></span></button>
+        </div>
+      </div>
+      <div class="all-caught-up" id="speakCaughtUp" style="display:none;">
+        <div class="big">✅</div>
+        <div class="msg">All caught up</div>
+        <div class="sub" id="speakCaughtUpSub">Next character unlocks soon</div>
+        <button class="btn btn-ghost" id="speakStudyAnyway">Study ahead anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="panel" id="panel-settings">
+    <div class="settings-card">
+      <div class="settings-title"><span class="dot"></span>Scripts</div>
+      <div class="mode-sub">
+        <div class="chip on" data-script="hiragana">Hiragana</div>
+        <div class="chip on" data-script="katakana">Katakana</div>
+        <div class="chip" data-script="kanji">Kanji</div>
+      </div>
+
+      <div class="settings-title"><span class="dot"></span>Columns <span style="font-weight:400; font-size:11px; color:rgba(27,28,43,0.45); text-transform:none; letter-spacing:0;">(kana only)</span></div>
+      <div class="set-group">
+        <div class="set-group-label">Base (gojūon)</div>
+        <div class="chip-row" id="baseChips"></div>
+      </div>
+      <div class="set-group">
+        <div class="set-group-label">Dakuten / Handakuten</div>
+        <div class="chip-row" id="dakChips"></div>
+      </div>
+      <div class="set-group">
+        <div class="set-group-label">Kanji set</div>
+        <div class="chip-row" id="kanjiChips"></div>
+        <div style="font-size:11.5px; color:rgba(27,28,43,0.5); margin-top:6px; line-height:1.5;">
+          Kanji quiz asks for the English meaning (not romaji), since most kanji have multiple readings. The speaker still plays one common pronunciation.
+        </div>
+      </div>
+
+      <div class="settings-title"><span class="dot"></span>Drawing Check</div>
+      <div class="chip-row">
+        <div class="chip on" id="strictChip">Strict match</div>
+      </div>
+      <div style="font-size:12px; color:rgba(27,28,43,0.5); margin-top:8px; line-height:1.5;">
+        "Check Drawing" compares your strokes to the printed character's shape and gives a similarity score — it's shape-matching, not full handwriting AI, so judge close calls with your own eye too.
+      </div>
+
+      <div class="settings-title" style="margin-top:16px;"><span class="dot"></span>Spaced Repetition</div>
+      <div style="font-size:12px; color:rgba(27,28,43,0.5); line-height:1.5; margin-bottom:10px;">
+        After each answer, grade yourself like Anki: <b>Again</b> brings it back in ~2 min, <b>Hard</b>/<b>Good</b>/<b>Easy</b> space it out further each time you get it right. Characters you know well quietly stop showing up for days or weeks. This all saves to your device — it's private and stays even if you close the app, but only on this browser/device.
+      </div>
+      <button class="btn btn-ghost" id="resetProgressBtn" style="width:100%;">Reset all progress</button>
+    </div>
+  </div>
+
+  <footer>Progress saves on this device · fully offline, nothing leaves your phone</footer>
+</div>
+
+<script>
+/* ---------------- Data ---------------- */
+const BASE_COLUMNS = [
+  {key:'a',  hira:['あ','い','う','え','お'], kata:['ア','イ','ウ','エ','オ'], romaji:['a','i','u','e','o']},
+  {key:'ka', hira:['か','き','く','け','こ'], kata:['カ','キ','ク','ケ','コ'], romaji:['ka','ki','ku','ke','ko']},
+  {key:'sa', hira:['さ','し','す','せ','そ'], kata:['サ','シ','ス','セ','ソ'], romaji:['sa','shi','su','se','so']},
+  {key:'ta', hira:['た','ち','つ','て','と'], kata:['タ','チ','ツ','テ','ト'], romaji:['ta','chi','tsu','te','to']},
+  {key:'na', hira:['な','に','ぬ','ね','の'], kata:['ナ','ニ','ヌ','ネ','ノ'], romaji:['na','ni','nu','ne','no']},
+  {key:'ha', hira:['は','ひ','ふ','へ','ほ'], kata:['ハ','ヒ','フ','ヘ','ホ'], romaji:['ha','hi','fu','he','ho']},
+  {key:'ma', hira:['ま','み','む','め','も'], kata:['マ','ミ','ム','メ','モ'], romaji:['ma','mi','mu','me','mo']},
+  {key:'ya', hira:['や','ゆ','よ'], kata:['ヤ','ユ','ヨ'], romaji:['ya','yu','yo']},
+  {key:'ra', hira:['ら','り','る','れ','ろ'], kata:['ラ','リ','ル','レ','ロ'], romaji:['ra','ri','ru','re','ro']},
+  {key:'wa', hira:['わ','を'], kata:['ワ','ヲ'], romaji:['wa','wo']},
+  {key:'n',  hira:['ん'], kata:['ン'], romaji:['n']},
+];
+const DAK_COLUMNS = [
+  {key:'ga', hira:['が','ぎ','ぐ','げ','ご'], kata:['ガ','ギ','グ','ゲ','ゴ'], romaji:['ga','gi','gu','ge','go']},
+  {key:'za', hira:['ざ','じ','ず','ぜ','ぞ'], kata:['ザ','ジ','ズ','ゼ','ゾ'], romaji:['za','ji','zu','ze','zo']},
+  {key:'da', hira:['だ','ぢ','づ','で','ど'], kata:['ダ','ヂ','ヅ','デ','ド'], romaji:['da','ji','zu','de','do']},
+  {key:'ba', hira:['ば','び','ぶ','べ','ぼ'], kata:['バ','ビ','ブ','ベ','ボ'], romaji:['ba','bi','bu','be','bo']},
+  {key:'pa', hira:['ぱ','ぴ','ぷ','ぺ','ぽ'], kata:['パ','ピ','プ','ペ','ポ'], romaji:['pa','pi','pu','pe','po']},
+];
+
+const KANJI = [
+  {char:'一', meaning:'one', reading:'ichi'},
+  {char:'二', meaning:'two', reading:'ni'},
+  {char:'三', meaning:'three', reading:'san'},
+  {char:'四', meaning:'four', reading:'yon'},
+  {char:'五', meaning:'five', reading:'go'},
+  {char:'六', meaning:'six', reading:'roku'},
+  {char:'七', meaning:'seven', reading:'nana'},
+  {char:'八', meaning:'eight', reading:'hachi'},
+  {char:'九', meaning:'nine', reading:'kyuu'},
+  {char:'十', meaning:'ten', reading:'juu'},
+  {char:'人', meaning:'person', reading:'hito'},
+  {char:'日', meaning:'sun', reading:'hi'},
+  {char:'月', meaning:'moon', reading:'tsuki'},
+  {char:'火', meaning:'fire', reading:'hi'},
+  {char:'水', meaning:'water', reading:'mizu'},
+  {char:'木', meaning:'tree', reading:'ki'},
+  {char:'金', meaning:'gold', reading:'kin'},
+  {char:'土', meaning:'earth', reading:'tsuchi'},
+  {char:'山', meaning:'mountain', reading:'yama'},
+  {char:'川', meaning:'river', reading:'kawa'},
+  {char:'田', meaning:'ricefield', reading:'ta'},
+  {char:'女', meaning:'woman', reading:'onna'},
+  {char:'男', meaning:'man', reading:'otoko'},
+  {char:'子', meaning:'child', reading:'ko'},
+  {char:'学', meaning:'study', reading:'gaku'},
+  {char:'生', meaning:'life', reading:'sei'},
+  {char:'先', meaning:'before', reading:'sen'},
+  {char:'校', meaning:'school', reading:'kou'},
+  {char:'大', meaning:'big', reading:'dai'},
+  {char:'小', meaning:'small', reading:'shou'},
+  {char:'中', meaning:'middle', reading:'naka'},
+  {char:'上', meaning:'up', reading:'ue'},
+  {char:'下', meaning:'down', reading:'shita'},
+  {char:'本', meaning:'book', reading:'hon'},
+  {char:'名', meaning:'name', reading:'na'},
+  {char:'気', meaning:'spirit', reading:'ki'},
+];
+const KANJI_GROUPS = [
+  {key:'numbers', label:'Numbers 1–10', chars:['一','二','三','四','五','六','七','八','九','十']},
+  {key:'nature', label:'Nature', chars:['日','月','火','水','木','金','土','山','川','田']},
+  {key:'people', label:'People', chars:['人','女','男','子','先','生']},
+  {key:'other', label:'Everyday', chars:['学','校','大','小','中','上','下','本','名','気']},
+];
+
+const state = {
+  scripts: {hiragana:true, katakana:true, kanji:false},
+  base: new Set(BASE_COLUMNS.map(c=>c.key)),
+  dak: new Set(),
+  kanjiGroups: new Set(KANJI_GROUPS.map(g=>g.key)),
+  strict: true,
+  type: {score:0, total:0, streak:0, current:null},
+  draw: {score:0, total:0, streak:0, current:null},
+  speak: {score:0, total:0, streak:0, current:null},
+  ignoreSchedule: {type:false, draw:false, speak:false}
+};
+
+function buildPool(){
+  const pool = [];
+  const cols = [...BASE_COLUMNS.filter(c=>state.base.has(c.key)), ...DAK_COLUMNS.filter(c=>state.dak.has(c.key))];
+  cols.forEach(col=>{
+    col.hira.forEach((ch,i)=>{ if(state.scripts.hiragana) pool.push({char:ch, accepts:[col.romaji[i]], reading:col.romaji[i], hint:'romaji', script:'hiragana'}); });
+    col.kata.forEach((ch,i)=>{ if(state.scripts.katakana) pool.push({char:ch, accepts:[col.romaji[i]], reading:col.romaji[i], hint:'romaji', script:'katakana'}); });
+  });
+  if(state.scripts.kanji){
+    KANJI_GROUPS.filter(g=>state.kanjiGroups.has(g.key)).forEach(g=>{
+      g.chars.forEach(ch=>{
+        const k = KANJI.find(x=>x.char===ch);
+        if(k) pool.push({char:k.char, accepts:[k.meaning, k.reading], reading:k.reading, hint:'meaning', script:'kanji'});
+      });
+    });
+  }
+  return pool;
+}
+
+/* ---------------- Spaced Repetition (Anki-style) ---------------- */
+const SRS_KEY = 'kanaDojo_srs_v1';
+let srs = {};
+function loadSRS(){
+  try{
+    const raw = localStorage.getItem(SRS_KEY);
+    srs = raw ? JSON.parse(raw) : {};
+  }catch(e){ srs = {}; }
+}
+function saveSRS(){
+  try{ localStorage.setItem(SRS_KEY, JSON.stringify(srs)); }catch(e){ /* storage unavailable */ }
+}
+loadSRS();
+
+document.getElementById('resetProgressBtn').addEventListener('click', ()=>{
+  if(!confirm('Reset all saved progress? This clears every character\'s review history on this device.')) return;
+  srs = {};
+  saveSRS();
+  state.ignoreSchedule = {type:false, draw:false, speak:false};
+  newTypeQuestion(); newDrawQuestion(); newSpeakQuestion();
+});
+
+const DAY = 24*60*60*1000;
+function cardState(char){
+  return srs[char] || null;
+}
+function isDue(char){
+  const s = srs[char];
+  if(!s) return true; // never studied = always available
+  return s.due <= Date.now();
+}
+function isMastered(char){
+  const s = srs[char];
+  return s && s.interval >= 21;
+}
+function isLearning(char){
+  const s = srs[char];
+  return s && s.interval < 1;
+}
+// Preview intervals shown on grading buttons, without committing
+function previewInterval(char, grade){
+  const s = srs[char] || {interval:0, ease:2.5};
+  let days;
+  if(grade==='again') days = 2/1440; // ~2 minutes
+  else if(grade==='hard') days = s.interval===0 ? 10/1440 : Math.max(s.interval*1.2, s.interval+0.5);
+  else if(grade==='good') days = s.interval===0 ? 1 : s.interval*s.ease;
+  else days = s.interval===0 ? 3 : s.interval*s.ease*1.3;
+  return formatInterval(days);
+}
+function formatInterval(days){
+  if(days < 1/24) return `${Math.max(1,Math.round(days*1440))}m`;
+  if(days < 1) return `${Math.round(days*24)}h`;
+  if(days < 30) return `${Math.round(days)}d`;
+  return `${(days/30).toFixed(1)}mo`;
+}
+function gradeCard(char, grade){
+  const now = Date.now();
+  let s = srs[char] || {interval:0, ease:2.5, reps:0, due:now};
+  if(grade==='again'){
+    s.ease = Math.max(1.3, s.ease - 0.2);
+    s.interval = 0;
+    s.due = now + 2*60*1000;
+  } else if(grade==='hard'){
+    s.ease = Math.max(1.3, s.ease - 0.15);
+    s.interval = s.interval===0 ? 10/1440 : Math.max(s.interval*1.2, s.interval+0.5);
+    s.reps++;
+    s.due = now + s.interval*DAY;
+  } else if(grade==='good'){
+    s.interval = s.interval===0 ? 1 : s.interval*s.ease;
+    s.reps++;
+    s.due = now + s.interval*DAY;
+  } else if(grade==='easy'){
+    s.ease = s.ease + 0.15;
+    s.interval = s.interval===0 ? 3 : s.interval*s.ease*1.3;
+    s.reps++;
+    s.due = now + s.interval*DAY;
+  }
+  srs[char] = s;
+  saveSRS();
+}
+
+function srsStats(pool){
+  let mastered=0, due=0, learning=0;
+  const now = Date.now();
+  pool.forEach(item=>{
+    const s = srs[item.char];
+    if(s && s.interval>=21) mastered++;
+    else if(!s || s.due<=now) due++;
+    else learning++;
+  });
+  return {mastered, due, learning, total: pool.length};
+}
+function updateProgressBar(prefix, pool){
+  const st = srsStats(pool);
+  const total = st.total || 1;
+  document.getElementById(prefix+'ProgMastered').style.width = (st.mastered/total*100)+'%';
+  document.getElementById(prefix+'ProgDue').style.width = (st.due/total*100)+'%';
+  document.getElementById(prefix+'ProgLearning').style.width = (st.learning/total*100)+'%';
+  document.getElementById(prefix+'ProgressLabel').textContent = `${st.mastered}/${st.total} mastered`;
+}
+
+/* Picks a due card, preferring ones waiting longest / new cards. Returns null if nothing due. */
+function pickDue(pool, lastChar, ignoreSchedule){
+  if(pool.length === 0) return null;
+  let candidates = ignoreSchedule ? pool.slice() : pool.filter(i=>isDue(i.char));
+  if(candidates.length === 0) return null;
+  const filtered = candidates.filter(i=>i.char!==lastChar);
+  if(filtered.length) candidates = filtered;
+  candidates.sort((a,b)=>{
+    const sa = srs[a.char], sb = srs[b.char];
+    const da = sa ? sa.due : 0, db = sb ? sb.due : 0;
+    return da - db;
+  });
+  const top = candidates.slice(0, Math.min(6, candidates.length));
+  return top[Math.floor(Math.random()*top.length)];
+}
+function nextDueIn(pool){
+  const now = Date.now();
+  let soonest = Infinity;
+  pool.forEach(item=>{
+    const s = srs[item.char];
+    if(s && s.due > now) soonest = Math.min(soonest, s.due - now);
+  });
+  return soonest === Infinity ? null : soonest;
+}
+
+
+let jaVoice = null;
+function loadVoice(){
+  const voices = speechSynthesis.getVoices();
+  jaVoice = voices.find(v=>v.lang==='ja-JP') || voices.find(v=>v.lang && v.lang.startsWith('ja')) || null;
+}
+if('speechSynthesis' in window){
+  loadVoice();
+  speechSynthesis.onvoiceschanged = loadVoice;
+}
+function speak(text, btnEl){
+  if(!('speechSynthesis' in window) || !text) return;
+  speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'ja-JP';
+  if(jaVoice) utter.voice = jaVoice;
+  utter.rate = 0.85;
+  if(btnEl){
+    btnEl.classList.add('playing');
+    utter.onend = ()=> btnEl.classList.remove('playing');
+    utter.onerror = ()=> btnEl.classList.remove('playing');
+  }
+  speechSynthesis.speak(utter);
+}
+
+function cap(s){ return s[0].toUpperCase()+s.slice(1); }
+function showGradeRow(prefix, item){
+  ['again','hard','good','easy'].forEach(g=>{
+    const el = document.getElementById(prefix+'Iv'+cap(g));
+    if(el) el.textContent = previewInterval(item.char, g);
+  });
+  document.getElementById(prefix+'GradeRow').classList.add('show');
+}
+function hideGradeRow(prefix){
+  document.getElementById(prefix+'GradeRow').classList.remove('show');
+}
+function showCaughtUp(prefix, pool){
+  document.getElementById(prefix+'QuizBody').style.display = 'none';
+  document.getElementById(prefix+'CaughtUp').style.display = 'block';
+  const ms = nextDueIn(pool);
+  document.getElementById(prefix+'CaughtUpSub').textContent = ms
+    ? `Next review unlocks in about ${formatInterval(ms/DAY)}`
+    : 'No characters match your current Settings — enable more to keep going';
+}
+function hideCaughtUp(prefix){
+  document.getElementById(prefix+'QuizBody').style.display = '';
+  document.getElementById(prefix+'CaughtUp').style.display = 'none';
+}
+['type','draw','speak'].forEach(prefix=>{
+  document.querySelectorAll('#'+prefix+'GradeRow .grade-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const grade = btn.dataset.grade;
+      const item = state[prefix].current;
+      if(!item) return;
+      gradeCard(item.char, grade);
+      hideGradeRow(prefix);
+      if(prefix==='type') newTypeQuestion();
+      else if(prefix==='draw') newDrawQuestion();
+      else newSpeakQuestion();
+    });
+  });
+});
+
+/* ---------------- Tabs ---------------- */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.tab).classList.add('active');
+    if(tab.dataset.tab==='type') document.getElementById('romajiInput').focus();
+  });
+});
+
+/* ---------------- Settings UI ---------------- */
+const baseChipsEl = document.getElementById('baseChips');
+const dakChipsEl = document.getElementById('dakChips');
+BASE_COLUMNS.forEach(c=>{
+  const chip = document.createElement('div');
+  chip.className = 'chip on';
+  chip.textContent = c.romaji[0] + '-';
+  chip.addEventListener('click', ()=>{
+    if(state.base.has(c.key)){ state.base.delete(c.key); chip.classList.remove('on'); }
+    else { state.base.add(c.key); chip.classList.add('on'); }
+  });
+  baseChipsEl.appendChild(chip);
+});
+DAK_COLUMNS.forEach(c=>{
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+  chip.textContent = c.romaji[0] + '-';
+  chip.addEventListener('click', ()=>{
+    if(state.dak.has(c.key)){ state.dak.delete(c.key); chip.classList.remove('on'); }
+    else { state.dak.add(c.key); chip.classList.add('on'); }
+  });
+  dakChipsEl.appendChild(chip);
+});
+const kanjiChipsEl = document.getElementById('kanjiChips');
+KANJI_GROUPS.forEach(g=>{
+  const chip = document.createElement('div');
+  chip.className = 'chip on';
+  chip.textContent = g.label;
+  chip.addEventListener('click', ()=>{
+    if(state.kanjiGroups.has(g.key)){ state.kanjiGroups.delete(g.key); chip.classList.remove('on'); }
+    else { state.kanjiGroups.add(g.key); chip.classList.add('on'); }
+  });
+  kanjiChipsEl.appendChild(chip);
+});
+document.querySelectorAll('[data-script]').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    const key = chip.dataset.script;
+    const activeCount = Object.values(state.scripts).filter(Boolean).length;
+    if(state.scripts[key] && activeCount===1) return; // keep at least one
+    state.scripts[key] = !state.scripts[key];
+    chip.classList.toggle('on');
+  });
+});
+document.getElementById('strictChip').addEventListener('click', function(){
+  state.strict = !state.strict;
+  this.classList.toggle('on');
+});
+
+/* ---------------- TYPE MODE ---------------- */
+const typeCharEl = document.getElementById('typeChar');
+const typeSetLabelEl = document.getElementById('typeSetLabel');
+const romajiInput = document.getElementById('romajiInput');
+const typeFeedback = document.getElementById('typeFeedback');
+const typeSubmitBtn = document.getElementById('typeSubmit');
+
+function newTypeQuestion(){
+  const pool = buildPool();
+  updateProgressBar('type', pool);
+  const item = pickDue(pool, state.type.current ? state.type.current.char : null, state.ignoreSchedule.type);
+  hideGradeRow('type');
+  typeSubmitBtn.disabled = false;
+  romajiInput.disabled = false;
+  if(!item){ state.type.current = null; showCaughtUp('type', pool); return; }
+  hideCaughtUp('type');
+  state.type.current = item;
+  typeCharEl.textContent = item.char;
+  typeSetLabelEl.textContent = item.hint === 'meaning' ? `${item.script} · type the meaning` : item.script;
+  romajiInput.placeholder = item.hint === 'meaning' ? 'type meaning…' : 'type romaji…';
+  romajiInput.value = '';
+  romajiInput.classList.remove('correct','wrong');
+  typeFeedback.textContent = '';
+  typeFeedback.className = 'feedback';
+  romajiInput.focus();
+}
+function submitType(){
+  const item = state.type.current;
+  if(!item) return;
+  const val = romajiInput.value.trim().toLowerCase();
+  if(!val) return;
+  state.type.total++;
+  if(item.accepts.includes(val)){
+    state.type.score++; state.type.streak++;
+    romajiInput.classList.add('correct'); romajiInput.classList.remove('wrong');
+    typeFeedback.textContent = '正解！ Correct — how did that feel?';
+    typeFeedback.className = 'feedback ok';
+  } else {
+    state.type.streak = 0;
+    romajiInput.classList.add('wrong'); romajiInput.classList.remove('correct');
+    typeFeedback.textContent = `Not quite — answer is "${item.accepts[0]}"`;
+    typeFeedback.className = 'feedback bad';
+  }
+  updateTypeStats();
+  showGradeRow('type', item);
+  typeSubmitBtn.disabled = true;
+  romajiInput.disabled = true;
+}
+document.getElementById('typeSpeak').addEventListener('click', function(){
+  speak(state.type.current.char, this);
+});
+function updateTypeStats(){
+  document.getElementById('typeScore').textContent = `${state.type.score}/${state.type.total}`;
+  document.getElementById('typeStreak').textContent = state.type.streak;
+}
+typeSubmitBtn.addEventListener('click', submitType);
+romajiInput.addEventListener('keydown', e=>{ if(e.key==='Enter') submitType(); });
+document.getElementById('typeStudyAnyway').addEventListener('click', ()=>{
+  state.ignoreSchedule.type = true;
+  newTypeQuestion();
+});
+
+/* ---------------- DRAW MODE ---------------- */
+const drawCharEl = document.getElementById('drawChar');
+const drawSetLabelEl = document.getElementById('drawSetLabel');
+const drawCanvas = document.getElementById('drawCanvas');
+const overlayCanvas = document.getElementById('overlayCanvas');
+const dctx = drawCanvas.getContext('2d');
+const octx = overlayCanvas.getContext('2d');
+const drawResult = document.getElementById('drawResult');
+let drawing = false, lastX=0, lastY=0, hasStrokes=false;
+
+function resetDrawCanvas(){
+  dctx.clearRect(0,0,drawCanvas.width, drawCanvas.height);
+  dctx.lineWidth = 22;
+  dctx.lineCap = 'round';
+  dctx.lineJoin = 'round';
+  dctx.strokeStyle = '#1b1c2b';
+  hasStrokes = false;
+  drawResult.textContent = '';
+  drawResult.className = 'score-pill';
+  overlayCanvas.classList.remove('show');
+}
+function canvasPos(e){
+  const rect = drawCanvas.getBoundingClientRect();
+  const scaleX = drawCanvas.width / rect.width;
+  const scaleY = drawCanvas.height / rect.height;
+  const p = (e.touches ? e.touches[0] : e);
+  return { x:(p.clientX-rect.left)*scaleX, y:(p.clientY-rect.top)*scaleY };
+}
+function startDraw(e){
+  e.preventDefault();
+  drawing = true;
+  const p = canvasPos(e);
+  lastX=p.x; lastY=p.y; hasStrokes = true;
+  dctx.beginPath(); dctx.moveTo(p.x,p.y); dctx.lineTo(p.x+0.1,p.y+0.1); dctx.stroke();
+}
+function moveDraw(e){
+  if(!drawing) return;
+  e.preventDefault();
+  const p = canvasPos(e);
+  dctx.beginPath(); dctx.moveTo(lastX,lastY); dctx.lineTo(p.x,p.y); dctx.stroke();
+  lastX=p.x; lastY=p.y;
+}
+function endDraw(e){ drawing = false; }
+drawCanvas.addEventListener('mousedown', startDraw);
+drawCanvas.addEventListener('mousemove', moveDraw);
+window.addEventListener('mouseup', endDraw);
+drawCanvas.addEventListener('touchstart', startDraw, {passive:false});
+drawCanvas.addEventListener('touchmove', moveDraw, {passive:false});
+drawCanvas.addEventListener('touchend', endDraw);
+
+const GLYPH_FONT = '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
+
+// Finds how far off-center a glyph renders for a given font, by actually drawing it to a
+// generously-sized scratch canvas and scanning the ink pixels — robust regardless of which
+// fallback font a device substitutes, unlike trusting textBaseline/measureText metrics.
+function glyphCenterDelta(char, fontSize){
+  const probeSize = Math.ceil(fontSize*2.6);
+  const probe = document.createElement('canvas');
+  probe.width = probeSize; probe.height = probeSize;
+  const pctx = probe.getContext('2d');
+  pctx.fillStyle = '#000';
+  pctx.font = `${fontSize}px ${GLYPH_FONT}`;
+  pctx.textAlign = 'center';
+  pctx.textBaseline = 'middle';
+  pctx.fillText(char, probeSize/2, probeSize/2);
+  const data = pctx.getImageData(0,0,probeSize,probeSize).data;
+  let minX=probeSize, maxX=0, minY=probeSize, maxY=0, found=false;
+  for(let y=0; y<probeSize; y++){
+    for(let x=0; x<probeSize; x++){
+      if(data[(y*probeSize+x)*4+3] > 10){
+        found = true;
+        if(x<minX) minX=x; if(x>maxX) maxX=x;
+        if(y<minY) minY=y; if(y>maxY) maxY=y;
+      }
+    }
+  }
+  if(!found) return {dx:0, dy:0};
+  return { dx: probeSize/2 - (minX+maxX)/2, dy: probeSize/2 - (minY+maxY)/2 };
+}
+
+function renderReferenceGlyph(ctx, char){
+  ctx.clearRect(0,0,overlayCanvas.width, overlayCanvas.height);
+  const fontSize = overlayCanvas.width*0.72;
+  const {dx,dy} = glyphCenterDelta(char, fontSize);
+  ctx.fillStyle = '#b13b3b';
+  ctx.font = `${fontSize}px ${GLYPH_FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(char, overlayCanvas.width/2 + dx, overlayCanvas.height/2 + dy);
+}
+
+function newDrawQuestion(){
+  const pool = buildPool();
+  updateProgressBar('draw', pool);
+  const item = pickDue(pool, state.draw.current ? state.draw.current.char : null, state.ignoreSchedule.draw);
+  hideGradeRow('draw');
+  if(!item){ state.draw.current = null; showCaughtUp('draw', pool); return; }
+  hideCaughtUp('draw');
+  state.draw.current = item;
+  drawCharEl.textContent = item.char;
+  drawSetLabelEl.textContent = `draw this — ${item.script}`;
+  resetDrawCanvas();
+  renderReferenceGlyph(octx, item.char);
+}
+document.getElementById('drawSpeak').addEventListener('click', function(){
+  speak(state.draw.current.char, this);
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  dctx.clearRect(0,0,drawCanvas.width, drawCanvas.height);
+  hasStrokes = false;
+  drawResult.textContent=''; drawResult.className='score-pill';
+});
+document.getElementById('revealBtn').addEventListener('click', ()=>{
+  overlayCanvas.classList.toggle('show');
+});
+document.getElementById('nextBtn').addEventListener('click', newDrawQuestion);
+document.getElementById('drawStudyAnyway').addEventListener('click', ()=>{
+  state.ignoreSchedule.draw = true;
+  newDrawQuestion();
+});
+
+document.getElementById('checkBtn').addEventListener('click', ()=>{
+  if(!hasStrokes){
+    drawResult.textContent = 'Draw the character first';
+    drawResult.className = 'score-pill bad';
+    return;
+  }
+  const item = state.draw.current;
+  const score = compareToReference(item.char);
+  state.draw.total++;
+  const threshold = state.strict ? 0.42 : 0.28;
+  if(score >= threshold){
+    state.draw.score++; state.draw.streak++;
+    drawResult.textContent = `Match ${Math.round(score*100)}% — nice, that's ${item.char} (${item.accepts[0]})`;
+    drawResult.className = 'score-pill ok';
+  } else {
+    state.draw.streak = 0;
+    drawResult.textContent = `Match ${Math.round(score*100)}% — tap "Show Stroke" to compare`;
+    drawResult.className = 'score-pill bad';
+  }
+  updateDrawStats();
+  showGradeRow('draw', item);
+});
+
+function updateDrawStats(){
+  document.getElementById('drawScore').textContent = `${state.draw.score}/${state.draw.total}`;
+  document.getElementById('drawStreak').textContent = state.draw.streak;
+}
+
+// Similarity: rasterize reference glyph offscreen, compare pixel coverage overlap (Dice coefficient)
+// against what the user drew, at reduced resolution & with slight blur tolerance via dilation.
+function compareToReference(char){
+  const size = 64;
+  const off = document.createElement('canvas'); off.width=size; off.height=size;
+  const octx2 = off.getContext('2d');
+  octx2.fillStyle = '#fff'; octx2.fillRect(0,0,size,size);
+  octx2.fillStyle = '#000';
+  const fontSize = size*0.72;
+  const {dx,dy} = glyphCenterDelta(char, fontSize);
+  octx2.font = `${fontSize}px ${GLYPH_FONT}`;
+  octx2.textAlign='center'; octx2.textBaseline='middle';
+  octx2.fillText(char, size/2 + dx, size/2 + dy);
+  const refData = octx2.getImageData(0,0,size,size).data;
+
+  const off2 = document.createElement('canvas'); off2.width=size; off2.height=size;
+  const uctx = off2.getContext('2d');
+  uctx.fillStyle = '#fff'; uctx.fillRect(0,0,size,size);
+  uctx.drawImage(drawCanvas, 0,0,size,size);
+  const userData = uctx.getImageData(0,0,size,size).data;
+
+  function mask(data){
+    const m = new Uint8Array(size*size);
+    for(let i=0;i<size*size;i++){
+      const r=data[i*4], g=data[i*4+1], b=data[i*4+2];
+      m[i] = (r+g+b)/3 < 200 ? 1 : 0;
+    }
+    return m;
+  }
+  function dilate(m){
+    const out = new Uint8Array(size*size);
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      let v=0;
+      for(let dy=-1;dy<=1 && !v;dy++) for(let dx=-1;dx<=1 && !v;dx++){
+        const ny=y+dy, nx=x+dx;
+        if(ny>=0&&ny<size&&nx>=0&&nx<size && m[ny*size+nx]) v=1;
+      }
+      out[y*size+x]=v;
+    }
+    return out;
+  }
+  const refMask = dilate(mask(refData));
+  const userMaskRaw = mask(userData);
+  const userMask = dilate(userMaskRaw);
+
+  let inter=0, refCount=0, userCount=0;
+  for(let i=0;i<size*size;i++){
+    if(refMask[i] && userMask[i]) inter++;
+    if(refMask[i]) refCount++;
+    if(userMaskRaw[i]) userCount++;
+  }
+  if(refCount===0 || userCount===0) return 0;
+  const dice = (2*inter) / (refCount + userCount);
+  return Math.max(0, Math.min(1, dice));
+}
+
+/* ---------------- SPEAK MODE (pronunciation training) ---------------- */
+const speakCharEl = document.getElementById('speakChar');
+const speakSetLabelEl = document.getElementById('speakSetLabel');
+const micBtn = document.getElementById('micBtn');
+const micHint = document.getElementById('micHint');
+const transcriptBox = document.getElementById('transcriptBox');
+const speakResult = document.getElementById('speakResult');
+
+// Reverse maps: hiragana/katakana char -> romaji, built from the same column data as the quiz.
+const hiraToRomaji = {}, kataToRomaji = {};
+[...BASE_COLUMNS, ...DAK_COLUMNS].forEach(col=>{
+  col.hira.forEach((ch,i)=>{ hiraToRomaji[ch] = col.romaji[i]; });
+  col.kata.forEach((ch,i)=>{ kataToRomaji[ch] = col.romaji[i]; });
+});
+
+function transliterate(text){
+  let out = '';
+  for(const ch of text){
+    if(hiraToRomaji[ch]) out += hiraToRomaji[ch];
+    else if(kataToRomaji[ch]) out += kataToRomaji[ch];
+    else {
+      const k = KANJI.find(kk=>kk.char===ch);
+      if(k) out += k.reading;
+      else if(/[a-zA-Z0-9]/.test(ch)) out += ch.toLowerCase();
+      // punctuation / spaces / unrecognized chars are dropped
+    }
+  }
+  return out.toLowerCase();
+}
+
+function levenshtein(a,b){
+  const m=a.length, n=b.length;
+  const d = Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=0;i<=m;i++) d[i][0]=i;
+  for(let j=0;j<=n;j++) d[0][j]=j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++){
+    d[i][j] = a[i-1]===b[j-1] ? d[i-1][j-1] : 1+Math.min(d[i-1][j-1], d[i][j-1], d[i-1][j]);
+  }
+  return d[m][n];
+}
+
+function newSpeakQuestion(){
+  const pool = buildPool();
+  updateProgressBar('speak', pool);
+  const item = pickDue(pool, state.speak.current ? state.speak.current.char : null, state.ignoreSchedule.speak);
+  hideGradeRow('speak');
+  if(!item){ state.speak.current = null; showCaughtUp('speak', pool); return; }
+  hideCaughtUp('speak');
+  state.speak.current = item;
+  speakCharEl.textContent = item.char;
+  speakSetLabelEl.textContent = item.script;
+  transcriptBox.textContent = '';
+  speakResult.textContent = '';
+  speakResult.className = 'score-pill';
+  micHint.textContent = 'Tap the mic, then say it out loud';
+}
+document.getElementById('speakHear').addEventListener('click', function(){
+  speak(state.speak.current.char, this);
+});
+document.getElementById('speakNextBtn').addEventListener('click', newSpeakQuestion);
+document.getElementById('speakStudyAnyway').addEventListener('click', ()=>{
+  state.ignoreSchedule.speak = true;
+  newSpeakQuestion();
+});
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null, listening = false;
+
+if(!SR){
+  document.getElementById('speakUnsupported').style.display = 'block';
+  micBtn.disabled = true;
+  micBtn.style.opacity = 0.4;
+  micHint.textContent = 'Mic input unavailable in this browser';
+} else {
+  recognition = new SR();
+  recognition.lang = 'ja-JP';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 5;
+
+  recognition.onstart = ()=>{
+    listening = true;
+    micBtn.classList.add('listening');
+    micHint.textContent = 'Listening…';
+    transcriptBox.textContent = '';
+    speakResult.textContent = ''; speakResult.className = 'score-pill';
+  };
+  recognition.onend = ()=>{
+    listening = false;
+    micBtn.classList.remove('listening');
+    if(micHint.textContent === 'Listening…') micHint.textContent = 'Tap the mic, then say it out loud';
+  };
+  recognition.onerror = (e)=>{
+    listening = false;
+    micBtn.classList.remove('listening');
+    micHint.textContent = e.error === 'no-speech' ? "Didn't catch that — try again" : 'Mic error — try again';
+  };
+  recognition.onresult = (e)=>{
+    const item = state.speak.current;
+    const alts = Array.from(e.results[0]).map(r=>r.transcript.trim());
+    transcriptBox.textContent = `You said: "${alts[0]}"`;
+
+    const expected = item.reading.toLowerCase();
+    let bestScore = 0;
+    alts.forEach(alt=>{
+      const heard = transliterate(alt);
+      if(!heard) return;
+      if(heard === expected || alt === item.char){ bestScore = Math.max(bestScore, 1); return; }
+      const dist = levenshtein(heard, expected);
+      const sim = 1 - dist / Math.max(heard.length, expected.length, 1);
+      bestScore = Math.max(bestScore, sim);
+      if(heard.includes(expected) || expected.includes(heard)) bestScore = Math.max(bestScore, 0.85);
+    });
+
+    state.speak.total++;
+    if(bestScore >= 0.7){
+      state.speak.score++; state.speak.streak++;
+      speakResult.textContent = `Good pronunciation — matched "${item.reading}"`;
+      speakResult.className = 'score-pill ok';
+    } else {
+      state.speak.streak = 0;
+      speakResult.textContent = `Expected "${item.reading}" — give it another try`;
+      speakResult.className = 'score-pill bad';
+    }
+    updateSpeakStats();
+    showGradeRow('speak', item);
+  };
+}
+function updateSpeakStats(){
+  document.getElementById('speakScore').textContent = `${state.speak.score}/${state.speak.total}`;
+  document.getElementById('speakStreak').textContent = state.speak.streak;
+}
+micBtn.addEventListener('click', ()=>{
+  if(!recognition) return;
+  if(listening){ recognition.stop(); return; }
+  try{ recognition.start(); } catch(err){ /* already started */ }
+});
+
+/* ---------------- Init ---------------- */
+newTypeQuestion();
+newDrawQuestion();
+newSpeakQuestion();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* offline caching unavailable, app still works online */ });
+  });
+}
+</script>
+</body>
+</html>
